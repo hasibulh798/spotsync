@@ -6,12 +6,9 @@ import (
 	"spotsync/dto"
 	"spotsync/models"
 	"spotsync/repository"
+	"spotsync/utils"
 
 	"gorm.io/gorm"
-)
-
-var (
-	ErrZoneNotFound = errors.New("parking zone not found")
 )
 
 // ZoneService defines the business operations for Parking Zones.
@@ -91,7 +88,7 @@ func (s *zoneService) GetZoneByID(id uint) (*dto.ZoneResponse, error) {
 	zone, err := s.zoneRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrZoneNotFound
+			return nil, utils.ErrZoneNotFound
 		}
 		return nil, err
 	}

@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
 	"spotsync/dto"
-	"spotsync/repository"
 	"spotsync/service"
 	"spotsync/utils"
 
@@ -30,27 +28,21 @@ func (h *ReservationHandler) Create(c echo.Context) error {
 	userIDVal := c.Get("user_id")
 	userID, ok := userIDVal.(uint)
 	if !ok || userID == 0 {
-		return utils.SendError(c, http.StatusUnauthorized, "Unauthorized", "User claims not found in context")
+		return echo.ErrUnauthorized
 	}
 
 	var req dto.CreateReservationRequest
 	if err := c.Bind(&req); err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Invalid request format", err.Error())
+		return err
 	}
 
 	if err := c.Validate(&req); err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Validation errors", err.Error())
+		return err
 	}
 
 	resp, err := h.reservationService.CreateReservation(userID, req)
 	if err != nil {
-		if errors.Is(err, repository.ErrZoneFull) {
-			return utils.SendError(c, http.StatusConflict, "Reservation failed", "Parking zone is full")
-		}
-		if errors.Is(err, service.ErrZoneNotFound) {
-			return utils.SendError(c, http.StatusNotFound, "Reservation failed", err.Error())
-		}
-		return utils.SendError(c, http.StatusInternalServerError, "Internal server error occurred", err.Error())
+		return err
 	}
 
 	return utils.SendSuccess(c, http.StatusCreated, "Reservation confirmed successfully", resp)
@@ -63,12 +55,12 @@ func (h *ReservationHandler) GetMy(c echo.Context) error {
 	userIDVal := c.Get("user_id")
 	userID, ok := userIDVal.(uint)
 	if !ok || userID == 0 {
-		return utils.SendError(c, http.StatusUnauthorized, "Unauthorized", "User claims not found in context")
+		return echo.ErrUnauthorized
 	}
 
 	resp, err := h.reservationService.GetMyReservations(userID)
 	if err != nil {
-		return utils.SendError(c, http.StatusInternalServerError, "Failed to retrieve reservations", err.Error())
+		return err
 	}
 
 	return utils.SendSuccess(c, http.StatusOK, "My reservations retrieved successfully", resp)
@@ -84,24 +76,18 @@ func (h *ReservationHandler) Cancel(c echo.Context) error {
 	role, okRole := roleVal.(string)
 
 	if !okUserID || !okRole || userID == 0 || role == "" {
-		return utils.SendError(c, http.StatusUnauthorized, "Unauthorized", "User claims not found in context")
+		return echo.ErrUnauthorized
 	}
 
 	idStr := c.Param("id")
 	reservationID, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Invalid reservation ID parameter", err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid reservation ID parameter: "+err.Error())
 	}
 
 	err = h.reservationService.CancelReservation(uint(reservationID), userID, role)
 	if err != nil {
-		if errors.Is(err, service.ErrReservationNotFound) {
-			return utils.SendError(c, http.StatusNotFound, "Cancellation failed", err.Error())
-		}
-		if errors.Is(err, service.ErrForbidden) {
-			return utils.SendError(c, http.StatusForbidden, "Cancellation failed", err.Error())
-		}
-		return utils.SendError(c, http.StatusInternalServerError, "Internal server error occurred", err.Error())
+		return err
 	}
 
 	return utils.SendSuccess(c, http.StatusOK, "Reservation cancelled successfully", nil)
@@ -112,7 +98,7 @@ func (h *ReservationHandler) Cancel(c echo.Context) error {
 func (h *ReservationHandler) GetAll(c echo.Context) error {
 	resp, err := h.reservationService.GetAllReservations()
 	if err != nil {
-		return utils.SendError(c, http.StatusInternalServerError, "Failed to retrieve reservations", err.Error())
+		return err
 	}
 
 	return utils.SendSuccess(c, http.StatusOK, "All reservations retrieved successfully", resp)

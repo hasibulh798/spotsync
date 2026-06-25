@@ -6,13 +6,9 @@ import (
 	"spotsync/dto"
 	"spotsync/models"
 	"spotsync/repository"
+	"spotsync/utils"
 
 	"gorm.io/gorm"
-)
-
-var (
-	ErrForbidden           = errors.New("forbidden: insufficient permission to access this resource")
-	ErrReservationNotFound = errors.New("reservation not found")
 )
 
 // ReservationService defines business logic for parking reservations.
@@ -41,7 +37,7 @@ func (s *reservationService) CreateReservation(userID uint, req dto.CreateReserv
 	_, err := s.zoneRepo.FindByID(req.ZoneID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrZoneNotFound
+			return nil, utils.ErrZoneNotFound
 		}
 		return nil, err
 	}
@@ -75,14 +71,14 @@ func (s *reservationService) CancelReservation(reservationID uint, requestingUse
 	res, err := s.reservationRepo.FindByID(reservationID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return ErrReservationNotFound
+			return utils.ErrReservationNotFound
 		}
 		return err
 	}
 
 	// 2. Authorization guard: drivers can only cancel their own reservations; admins can cancel any
 	if requestingRole != "admin" && res.UserID != requestingUserID {
-		return ErrForbidden
+		return utils.ErrForbidden
 	}
 
 	// 3. Perform status update to cancelled

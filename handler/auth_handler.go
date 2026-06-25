@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"net/http"
 
 	"spotsync/dto"
@@ -26,19 +25,16 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 func (h *AuthHandler) Register(c echo.Context) error {
 	var req dto.RegisterRequest
 	if err := c.Bind(&req); err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Invalid request format", err.Error())
+		return err
 	}
 
 	if err := c.Validate(&req); err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Validation errors", err.Error())
+		return err
 	}
 
 	resp, err := h.authService.Register(req)
 	if err != nil {
-		if errors.Is(err, service.ErrEmailExists) {
-			return utils.SendError(c, http.StatusBadRequest, "User registration failed", err.Error())
-		}
-		return utils.SendError(c, http.StatusInternalServerError, "Internal server error occurred", "An unexpected error occurred on the server")
+		return err
 	}
 
 	return utils.SendSuccess(c, http.StatusCreated, "User registered successfully", resp)
@@ -49,19 +45,16 @@ func (h *AuthHandler) Register(c echo.Context) error {
 func (h *AuthHandler) Login(c echo.Context) error {
 	var req dto.LoginRequest
 	if err := c.Bind(&req); err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Invalid request format", err.Error())
+		return err
 	}
 
 	if err := c.Validate(&req); err != nil {
-		return utils.SendError(c, http.StatusBadRequest, "Validation errors", err.Error())
+		return err
 	}
 
 	resp, err := h.authService.Login(req)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidCredentials) {
-			return utils.SendError(c, http.StatusUnauthorized, "Login failed", err.Error())
-		}
-		return utils.SendError(c, http.StatusInternalServerError, "Internal server error occurred", "An unexpected error occurred on the server")
+		return err
 	}
 
 	return utils.SendSuccess(c, http.StatusOK, "Login successful", resp)

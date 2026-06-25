@@ -1,15 +1,11 @@
 package repository
 
 import (
-	"errors"
 	"spotsync/models"
+	"spotsync/utils"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-)
-
-var (
-	ErrZoneFull = errors.New("parking zone is full")
 )
 
 // ReservationRepository defines the contract for Reservation database operations.
@@ -50,7 +46,7 @@ func (r *reservationRepository) CreateReservationWithLock(zoneID uint, userID ui
 
 		// 3. Capacity check
 		if int(activeCount) >= zone.TotalCapacity {
-			return ErrZoneFull // Returns ErrZoneFull to rollback transaction
+			return utils.ErrZoneFull // Returns ErrZoneFull to rollback transaction
 		}
 
 		// 4. Create reservation

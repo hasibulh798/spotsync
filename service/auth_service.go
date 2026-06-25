@@ -7,16 +7,11 @@ import (
 	"spotsync/dto"
 	"spotsync/models"
 	"spotsync/repository"
+	"spotsync/utils"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-)
-
-var (
-	ErrEmailExists        = errors.New("email already registered")
-	ErrInvalidCredentials = errors.New("invalid email or password")
-	ErrUserNotFound       = errors.New("user not found")
 )
 
 // AuthService defines user registration and login business rules.
@@ -42,7 +37,7 @@ func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, erro
 	// 1. Check if email already exists
 	existingUser, err := s.userRepo.FindByEmail(req.Email)
 	if err == nil && existingUser != nil {
-		return nil, ErrEmailExists
+		return nil, utils.ErrEmailExists
 	}
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
@@ -88,14 +83,14 @@ func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, ErrInvalidCredentials
+			return nil, utils.ErrInvalidCredentials
 		}
 		return nil, err
 	}
 
 	// 2. Compare password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, utils.ErrInvalidCredentials
 	}
 
 	// 3. Generate JWT Token (payload contains id and role)

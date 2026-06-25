@@ -49,6 +49,9 @@ func main() {
 	// Register Custom Validator
 	e.Validator = &utils.CustomValidator{Validator: validator.New()}
 
+	// Register Global Custom Error Handler
+	e.HTTPErrorHandler = utils.CustomHTTPErrorHandler
+
 	// 5. Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
