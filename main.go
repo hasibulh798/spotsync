@@ -8,6 +8,7 @@ import (
 	"spotsync/handler"
 	"spotsync/models"
 	"spotsync/repository"
+	"spotsync/router"
 	"spotsync/service"
 	"spotsync/utils"
 
@@ -53,13 +54,12 @@ func main() {
 		})
 	})
 
-	// 7. API Routes
-	api := e.Group("/api/v1")
-
-	// Auth Group
-	authGroup := api.Group("/auth")
-	authGroup.POST("/register", authHandler.Register)
-	authGroup.POST("/login", authHandler.Login)
+	// 7. API Routes (Public & Protected Setup)
+	router.SetupRoutes(router.RouterConfig{
+		Echo:        e,
+		AuthHandler: authHandler,
+		JWTSecret:   cfg.JWTSecret,
+	})
 
 	// 8. Start Server
 	log.Printf("Starting SpotSync server on port %s...", cfg.Port)
