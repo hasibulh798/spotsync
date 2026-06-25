@@ -5,7 +5,10 @@ import (
 	"net/http"
 
 	"spotsync/config"
+	"spotsync/handler"
 	"spotsync/models"
+	"spotsync/repository"
+	"spotsync/service"
 	"spotsync/utils"
 
 	"github.com/go-playground/validator/v10"
@@ -26,21 +29,23 @@ func main() {
 	}
 	log.Println("AutoMigration completed successfully")
 
-	// Avoid unused db error/warning by logging its pointer or using it when we configure repositories
-	_ = db
+	// 3. Manual Dependency Injection
+	userRepo := repository.NewUserRepository(db)
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	authHandler := handler.NewAuthHandler(authService)
 
-	// 3. Initialize Echo Instance
+	// 4. Initialize Echo Instance
 	e := echo.New()
 
 	// Register Custom Validator
 	e.Validator = &utils.CustomValidator{Validator: validator.New()}
 
-	// 4. Middleware
+	// 5. Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	// 5. Health Check Route
+	// 6. Health Check Route
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]interface{}{
 			"success": true,
@@ -48,7 +53,15 @@ func main() {
 		})
 	})
 
-	// 6. Start Server
+	// 7. API Routes
+	api := e.Group("/api/v1")
+
+	// Auth Group
+	authGroup := api.Group("/auth")
+	authGroup.POST("/register", authHandler.Register)
+	authGroup.POST("/login", authHandler.Login)
+
+	// 8. Start Server
 	log.Printf("Starting SpotSync server on port %s...", cfg.Port)
 	if err := e.Start(":" + cfg.Port); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
