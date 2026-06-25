@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"spotsync/config"
+	"spotsync/models"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -14,9 +15,17 @@ func main() {
 	// 1. Load configurations
 	cfg := config.LoadConfig()
 
-	// 2. Database Connection Placeholder
-	// TODO: Initialize database connection using config.DBURL (GORM + Postgres)
-	log.Println("Database connection initialized (placeholder)")
+	// 2. Initialize Database and AutoMigrate models
+	db := config.InitDB(cfg)
+	log.Println("Running AutoMigration...")
+	err := db.AutoMigrate(&models.User{}, &models.ParkingZone{}, &models.Reservation{})
+	if err != nil {
+		log.Fatalf("AutoMigration failed: %v", err)
+	}
+	log.Println("AutoMigration completed successfully")
+
+	// Avoid unused db error/warning by logging its pointer or using it when we configure repositories
+	_ = db
 
 	// 3. Initialize Echo Instance
 	e := echo.New()
