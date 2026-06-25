@@ -6,7 +6,9 @@ import (
 
 	"spotsync/config"
 	"spotsync/models"
+	"spotsync/utils"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -29,6 +31,9 @@ func main() {
 
 	// 3. Initialize Echo Instance
 	e := echo.New()
+
+	// Register Custom Validator
+	e.Validator = &utils.CustomValidator{Validator: validator.New()}
 
 	// 4. Middleware
 	e.Use(middleware.Logger())
