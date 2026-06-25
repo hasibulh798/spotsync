@@ -33,12 +33,15 @@ func main() {
 	// 3. Manual Dependency Injection
 	userRepo := repository.NewUserRepository(db)
 	zoneRepo := repository.NewZoneRepository(db)
+	reservationRepo := repository.NewReservationRepository(db)
 
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	zoneService := service.NewZoneService(zoneRepo)
+	reservationService := service.NewReservationService(reservationRepo, zoneRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	zoneHandler := handler.NewZoneHandler(zoneService)
+	reservationHandler := handler.NewReservationHandler(reservationService)
 
 	// 4. Initialize Echo Instance
 	e := echo.New()
@@ -61,10 +64,11 @@ func main() {
 
 	// 7. API Routes (Public & Protected Setup)
 	router.SetupRoutes(router.RouterConfig{
-		Echo:        e,
-		AuthHandler: authHandler,
-		ZoneHandler: zoneHandler,
-		JWTSecret:   cfg.JWTSecret,
+		Echo:               e,
+		AuthHandler:        authHandler,
+		ZoneHandler:        zoneHandler,
+		ReservationHandler: reservationHandler,
+		JWTSecret:          cfg.JWTSecret,
 	})
 
 	// 8. Start Server

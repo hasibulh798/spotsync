@@ -9,10 +9,11 @@ import (
 
 // RouterConfig aggregates all handler dependencies to set up routes.
 type RouterConfig struct {
-	Echo        *echo.Echo
-	AuthHandler *handler.AuthHandler
-	ZoneHandler *handler.ZoneHandler
-	JWTSecret   string
+	Echo               *echo.Echo
+	AuthHandler        *handler.AuthHandler
+	ZoneHandler        *handler.ZoneHandler
+	ReservationHandler *handler.ReservationHandler
+	JWTSecret          string
 }
 
 // SetupRoutes registers public and protected endpoints.
@@ -29,12 +30,18 @@ func SetupRoutes(cfg RouterConfig) {
 	api.GET("/zones", cfg.ZoneHandler.GetAll)
 	api.GET("/zones/:id", cfg.ZoneHandler.GetByID)
 
-	// Protected Group (Requires login)
+	// Protected Group (Requires login - drivers & admins)
 	protected := api.Group("", middleware.JWTMiddleware(cfg.JWTSecret))
 	
+	// Reservation Routes
+	protected.POST("/reservations", cfg.ReservationHandler.Create)
+	protected.GET("/reservations/my-reservations", cfg.ReservationHandler.GetMy)
+	protected.DELETE("/reservations/:id", cfg.ReservationHandler.Cancel)
+
 	// Admin Only Group (Requires login & admin role)
 	adminOnly := api.Group("", middleware.JWTMiddleware(cfg.JWTSecret), middleware.RoleMiddleware("admin"))
 	adminOnly.POST("/zones", cfg.ZoneHandler.Create)
+	adminOnly.GET("/reservations", cfg.ReservationHandler.GetAll)
 
 	// Just a dummy ping to test protected routing group
 	protected.GET("/ping", func(c echo.Context) error {
