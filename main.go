@@ -32,8 +32,13 @@ func main() {
 
 	// 3. Manual Dependency Injection
 	userRepo := repository.NewUserRepository(db)
+	zoneRepo := repository.NewZoneRepository(db)
+
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	zoneService := service.NewZoneService(zoneRepo)
+
 	authHandler := handler.NewAuthHandler(authService)
+	zoneHandler := handler.NewZoneHandler(zoneService)
 
 	// 4. Initialize Echo Instance
 	e := echo.New()
@@ -58,6 +63,7 @@ func main() {
 	router.SetupRoutes(router.RouterConfig{
 		Echo:        e,
 		AuthHandler: authHandler,
+		ZoneHandler: zoneHandler,
 		JWTSecret:   cfg.JWTSecret,
 	})
 

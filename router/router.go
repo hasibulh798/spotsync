@@ -11,6 +11,7 @@ import (
 type RouterConfig struct {
 	Echo        *echo.Echo
 	AuthHandler *handler.AuthHandler
+	ZoneHandler *handler.ZoneHandler
 	JWTSecret   string
 }
 
@@ -24,10 +25,17 @@ func SetupRoutes(cfg RouterConfig) {
 	authGroup.POST("/register", cfg.AuthHandler.Register)
 	authGroup.POST("/login", cfg.AuthHandler.Login)
 
+	// Public Zone Routes
+	api.GET("/zones", cfg.ZoneHandler.GetAll)
+	api.GET("/zones/:id", cfg.ZoneHandler.GetByID)
+
 	// Protected Group (Requires login)
-	// We initialize this now. In later steps, we will mount zone and reservation routes here.
 	protected := api.Group("", middleware.JWTMiddleware(cfg.JWTSecret))
 	
+	// Admin Only Group (Requires login & admin role)
+	adminOnly := api.Group("", middleware.JWTMiddleware(cfg.JWTSecret), middleware.RoleMiddleware("admin"))
+	adminOnly.POST("/zones", cfg.ZoneHandler.Create)
+
 	// Just a dummy ping to test protected routing group
 	protected.GET("/ping", func(c echo.Context) error {
 		return c.JSON(200, map[string]interface{}{
