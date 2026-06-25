@@ -9,9 +9,10 @@ import (
 
 // Config holds all the configuration settings for the application.
 type Config struct {
-	DBURL     string
-	JWTSecret string
-	Port      string
+	DBURL          string
+	JWTSecret      string
+	Port           string
+	AllowedOrigins string
 }
 
 // LoadConfig loads the configuration from the environment variables or a .env file.
@@ -37,9 +38,15 @@ func LoadConfig() *Config {
 		log.Println("Warning: JWT_SECRET environment variable is not set, using default fallback")
 	}
 
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "*" // Default fallback
+	}
+
 	return &Config{
-		DBURL:     dbURL,
-		JWTSecret: jwtSecret,
-		Port:      port,
+		DBURL:          dbURL,
+		JWTSecret:      jwtSecret,
+		Port:           port,
+		AllowedOrigins: allowedOrigins,
 	}
 }

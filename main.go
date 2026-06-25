@@ -1,8 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
 
 	"spotsync/config"
 	"spotsync/handler"
@@ -52,10 +58,19 @@ func main() {
 	// Register Global Custom Error Handler
 	e.HTTPErrorHandler = utils.CustomHTTPErrorHandler
 
-	// 5. Middleware
-	e.Use(middleware.Logger())
+	// 5. Middleware Setup
+	// Request logging middleware
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "[Echo] time=${time_rfc3339}, method=${method}, uri=${uri}, status=${status}, latency=${latency_human}\n",
+	}))
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+
+	// CORS middleware configuration
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: strings.Split(cfg.AllowedOrigins, ","),
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+	}))
 
 	// 6. Health Check Route
 	e.GET("/health", func(c echo.Context) error {
@@ -74,9 +89,26 @@ func main() {
 		JWTSecret:          cfg.JWTSecret,
 	})
 
-	// 8. Start Server
-	log.Printf("Starting SpotSync server on port %s...", cfg.Port)
-	if err := e.Start(":" + cfg.Port); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	// 8. Start Server with Graceful Shutdown
+	go func() {
+		log.Printf("Starting SpotSync server on port %s...", cfg.Port)
+		if err := e.Start(":" + cfg.Port); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Shutting down the server: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shut down the server with a timeout of 10 seconds.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down SpotSync server gracefully...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		log.Fatalf("Server Graceful Shutdown Failed: %v", err)
 	}
+	log.Println("Server exited gracefully")
 }
